@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitDrive - GitHub File Explorer</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f7ff',
+              100: '#ebf0ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom scrollbars for clean UI */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans transition-colors duration-200">
+
+  <!-- Main Container -->
+  <div class="flex h-full overflow-hidden">
+    
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between hidden md:flex shrink-0">
+      <div class="p-6">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 mb-8">
+          <div class="p-2 bg-brand-100 dark:bg-slate-700 text-brand-600 dark:text-brand-500 rounded-lg">
+            <i data-lucide="hard-drive" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight">GitDrive</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">GitHub File Explorer</p>
+          </div>
+        </div>
+
+        <!-- Navigation Paths -->
+        <nav class="space-y-1">
+          <button onclick="navigateToPath('')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-brand-50 text-brand-600 dark:bg-slate-700/50 dark:text-brand-400 group">
+            <i data-lucide="folder" class="w-4 h-4"></i>
+            <span>All Files</span>
+          </button>
+          <button onclick="toggleBookmarksTab()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 group transition">
+            <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+            <span>Starred</span>
+          </button>
+          <button onclick="openConfigModal()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 group transition">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+            <span>Repository Settings</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Quick Info / Repo Specs Card -->
+      <div class="p-4 m-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+        <div class="flex items-center space-x-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+          <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
+          <span>Active Repository</span>
+        </div>
+        <div id="sidebar-repo-info" class="space-y-1">
+          <p class="text-sm font-bold truncate text-slate-700 dark:text-slate-200" id="sidebar-owner">Loading...</p>
+          <p class="text-xs truncate text-slate-500 dark:text-slate-400" id="sidebar-repo">Loading...</p>
+        </div>
+        <button onclick="openConfigModal()" class="mt-3 w-full py-1.5 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-medium rounded-lg text-slate-600 dark:text-slate-300 transition shadow-sm flex items-center justify-center space-x-1">
+          <i data-lucide="edit-3" class="w-3 h-3"></i>
+          <span>Change Repo</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      
+      <!-- TOP NAV BAR -->
+      <header class="h-16 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between px-4 md:px-8 shrink-0">
+        <div class="flex items-center space-x-4 flex-1 max-w-lg">
+          <!-- Mobile Menu Trigger -->
+          <button onclick="toggleMobileSidebar()" class="p-2 md:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+
+          <!-- Search Bar -->
+          <div class="relative w-full">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="search-input" oninput="handleSearch()" placeholder="Search current directory..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-900 border-0 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none placeholder-slate-400 dark:placeholder-slate-500 transition">
+          </div>
+        </div>
+
+        <!-- Quick Controls -->
+        <div class="flex items-center space-x-2 md:space-x-3">
+          <!-- Dark Mode Toggle -->
+          <button onclick="toggleDarkMode()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Toggle Theme">
+            <i data-lucide="sun" id="theme-sun" class="w-5 h-5 hidden"></i>
+            <i data-lucide="moon" id="theme-moon" class="w-5 h-5"></i>
+          </button>
+
+          <!-- Starred Count Indicator -->
+          <button onclick="toggleBookmarksTab()" class="relative p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="View Starred Items">
+            <i data-lucide="star" class="w-5 h-5"></i>
+            <span id="star-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-slate-800 rounded-full hidden"></span>
+          </button>
+
+          <!-- Grid / List View Toggle -->
+          <div class="flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900 p-0.5">
+            <button onclick="setViewMode('grid')" id="btn-grid-view" class="p-1.5 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm" title="Grid View">
+              <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            </button>
+            <button onclick="setViewMode('list')" id="btn-list-view" class="p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100" title="List View">
+              <i data-lucide="list" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- NAVIGATION BREADCRUMBS & CONTEXT BAR -->
+      <section class="bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50 py-3 px-4 md:px-8 flex flex-wrap items-center justify-between gap-3">
+        <!-- Breadcrumbs -->
+        <div id="breadcrumbs" class="flex items-center space-x-1.5 text-sm overflow-x-auto whitespace-nowrap py-1">
+          <!-- Dynamic Breadcrumbs insert here -->
+        </div>
+
+        <!-- Reload / API Info -->
+        <div class="flex items-center space-x-2">
+          <span id="api-status" class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+            Connected
+          </span>
+          <button onclick="fetchCurrentDirectory()" class="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Refresh folder">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- EXPLORER GRID / LIST VIEW -->
+      <div class="flex-1 overflow-y-auto p-4 md:p-8" id="explorer-container">
+        <!-- Loading State -->
+        <div id="state-loading" class="flex flex-col items-center justify-center py-20">
+          <div class="animate-spin text-brand-500 mb-4">
+            <i data-lucide="loader" class="w-10 h-10"></i>
+          </div>
+          <p class="text-sm font-medium text-slate-500">Loading directory files...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="state-error" class="hidden flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
+          <div class="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-500 rounded-full mb-4">
+            <i data-lucide="alert-circle" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1" id="error-title">Failed to load content</h3>
+          <p class="text-sm text-slate-500 mb-6" id="error-desc">We couldn't fetch files from this repository. Make sure it is public and correct.</p>
+          <div class="flex space-x-3">
+            <button onclick="openConfigModal()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg text-sm transition">
+              Adjust Settings
+            </button>
+            <button onclick="fetchCurrentDirectory()" class="px-4 py-2 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg text-sm transition">
+              Retry
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty Directory State -->
+        <div id="state-empty" class="hidden flex-col items-center justify-center py-20">
+          <div class="text-slate-300 dark:text-slate-600 mb-4">
+            <i data-lucide="folder-open" class="w-16 h-16"></i>
+          </div>
+          <p class="text-lg font-bold text-slate-700 dark:text-slate-300">This directory is empty</p>
+          <p class="text-sm text-slate-500">There are no files or folders inside this path.</p>
+        </div>
+
+        <!-- Grid View Mode Display -->
+        <div id="grid-view-wrapper" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 hidden">
+          <!-- Dynamically populated files -->
+        </div>
+
+        <!-- List View Mode Display -->
+        <div id="list-view-wrapper" class="hidden border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                <th class="p-4 w-1/2">Name</th>
+                <th class="p-4 w-1/6">Type</th>
+                <th class="p-4 w-1/6">Size</th>
+                <th class="p-4 w-1/6 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="list-view-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MOBILE SIDEBAR DRAWER -->
+  <div id="mobile-sidebar" class="fixed inset-0 z-50 flex hidden">
+    <!-- Backdrop overlay -->
+    <div onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <!-- Menu panel -->
+    <div class="relative flex flex-col w-64 max-w-xs bg-white dark:bg-slate-800 h-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-brand-100 dark:bg-slate-700 text-brand-600 dark:text-brand-500 rounded-lg">
+            <i data-lucide="hard-drive" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold">GitDrive</h1>
+          </div>
+        </div>
+        <button onclick="toggleMobileSidebar()" class="p-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <nav class="space-y-1 mb-8">
+        <button onclick="navigateToPath(''); toggleMobileSidebar();" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-brand-50 text-brand-600 dark:bg-slate-700/50 dark:text-brand-400">
+          <i data-lucide="folder" class="w-4 h-4"></i>
+          <span>All Files</span>
+        </button>
+        <button onclick="toggleBookmarksTab(); toggleMobileSidebar();" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+          <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+          <span>Starred</span>
+        </button>
+        <button onclick="openConfigModal(); toggleMobileSidebar();" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Repository Settings</span>
+        </button>
+      </nav>
+
+      <!-- Repo specs on mobile -->
+      <div class="mt-auto p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Active Repository</div>
+        <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate" id="mobile-sidebar-owner">Loading...</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 truncate mb-3" id="mobile-sidebar-repo">Loading...</p>
+        <button onclick="openConfigModal(); toggleMobileSidebar();" class="w-full py-1.5 bg-white dark:bg-slate-800 text-xs border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
+          Change Repo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILE PREVIEW MODAL -->
+  <div id="preview-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Backdrop -->
+    <div onclick="closePreviewModal()" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+    <!-- Modal Panel -->
+    <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-11/12 max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <header class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+        <div class="flex items-center space-x-3 min-w-0">
+          <div id="modal-file-icon" class="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg shrink-0">
+            <!-- Icon -->
+          </div>
+          <div class="min-w-0">
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 truncate" id="modal-file-name">file_name.ext</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400" id="modal-file-size">0 KB</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <!-- Star action in modal -->
+          <button id="modal-star-btn" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 transition">
+            <i data-lucide="star" class="w-5 h-5"></i>
+          </button>
+          <!-- Close Modal -->
+          <button onclick="closePreviewModal()" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-300 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Modal Content Body -->
+      <div class="flex-1 overflow-auto p-6" id="modal-preview-content">
+        <!-- Content will be injected contextually here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURATION MODAL -->
+  <div id="config-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Backdrop -->
+    <div onclick="closeConfigModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <!-- Modal panel -->
+    <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-11/12 max-w-md p-6 overflow-hidden">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="p-2 bg-brand-100 dark:bg-slate-700 text-brand-600 rounded-lg">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </div>
+        <h3 class="text-lg font-bold">Repository Configuration</h3>
+      </div>
+      <p class="text-sm text-slate-500 mb-6">Connect GitDrive to any public GitHub repository to browse files instantly.</p>
+
+      <form id="config-form" onsubmit="saveRepoSettings(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Repository Owner</label>
+          <input type="text" id="config-owner" required placeholder="e.g. facebook" class="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1.5">Repository Name</label>
+          <input type="text" id="config-repo" required placeholder="e.g. react" class="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center justify-between">
+            <span>Personal Access Token (Optional)</span>
+            <span class="text-[10px] text-slate-400">Increase API Rate Limits</span>
+          </label>
+          <input type="password" id="config-token" placeholder="ghp_xxxxxxxxxxxx" class="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+          <p class="text-[10px] text-slate-400 mt-1">Stored completely locally inside your browser cache. Never shared or sent to any server except directly to API GitHub.</p>
+        </div>
+
+        <div class="flex space-x-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="closeConfigModal()" class="flex-1 py-2 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-2 text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white rounded-xl transition shadow-md">
+            Save & Connect
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOOKMARKS DRAWER PANELS -->
+  <div id="bookmarks-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div onclick="toggleBookmarksTab()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-11/12 max-w-lg p-6 flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700 mb-4 shrink-0">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="star" class="w-5 h-5 text-amber-500 fill-amber-500"></i>
+          <h3 class="text-lg font-bold">Starred Items</h3>
+        </div>
+        <button onclick="toggleBookmarksTab()" class="p-1 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-2" id="bookmarks-list">
+        <!-- Bookmarked files list goes here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State Variables
+    let currentOwner = '';
+    let currentRepo = '';
+    let currentPath = ''; // Current relative folder path being browsed
+    let activeFiles = []; // Holds items currently fetched
+    let viewMode = 'grid'; // Grid or list view mode
+    let starredItems = []; // Bookmarks saved in localStorage
+    let apiToken = ''; // Personal Access Token to avoid GitHub Rate Limiting
+    let clickTimeout = null; // Timer to distinguish single click vs double click
+
+    // Init App
+    window.onload = function() {
+      initTheme();
+      loadSavedConfig();
+      loadBookmarks();
+      
+      // Attempt to auto-detect repository from the window's URL
+      const detectedRepo = detectGithubRepo();
+      if (detectedRepo && !currentOwner && !currentRepo) {
+        currentOwner = detectedRepo.owner;
+        currentRepo = detectedRepo.repo;
+      } else if (!currentOwner || !currentRepo) {
+        // Fallback default repository if run outside of GitHub Pages and config empty (Browses beautiful Tailwind CSS directory!)
+        currentOwner = 'tailwindlabs';
+        currentRepo = 'tailwindcss';
+      }
+
+      updateSidebarLabels();
+      fetchCurrentDirectory();
+      lucide.createIcons();
+    };
+
+    // 1. DYNAMIC GITHUB PAGES DETECTOR
+    function detectGithubRepo() {
+      const host = window.location.hostname;
+      const path = window.location.pathname;
+
+      // GitHub pages: username.github.io/repo-name/
+      if (host.endsWith('.github.io')) {
+        const owner = host.split('.')[0];
+        const pathSegments = path.split('/').filter(Boolean);
+        const repo = pathSegments[0] || '';
+        if (owner && repo) {
+          return { owner, repo };
+        }
+      }
+      return null;
+    }
+
+    // Load saved client settings
+    function loadSavedConfig() {
+      currentOwner = localStorage.getItem('gitdrive_owner') || '';
+      currentRepo = localStorage.getItem('gitdrive_repo') || '';
+      apiToken = localStorage.getItem('gitdrive_token') || '';
+      viewMode = localStorage.getItem('gitdrive_viewmode') || 'grid';
+      setViewMode(viewMode);
+    }
+
+    function saveRepoSettings(event) {
+      event.preventDefault();
+      const ownerVal = document.getElementById('config-owner').value.trim();
+      const repoVal = document.getElementById('config-repo').value.trim();
+      const tokenVal = document.getElementById('config-token').value.trim();
+
+      if (ownerVal && repoVal) {
+        currentOwner = ownerVal;
+        currentRepo = repoVal;
+        apiToken = tokenVal;
+
+        localStorage.setItem('gitdrive_owner', currentOwner);
+        localStorage.setItem('gitdrive_repo', currentRepo);
+        localStorage.setItem('gitdrive_token', apiToken);
+
+        updateSidebarLabels();
+        closeConfigModal();
+        currentPath = ''; // reset to root
+        fetchCurrentDirectory();
+      }
+    }
+
+    function updateSidebarLabels() {
+      document.getElementById('sidebar-owner').textContent = currentOwner;
+      document.getElementById('sidebar-repo').textContent = currentRepo;
+      document.getElementById('mobile-sidebar-owner').textContent = currentOwner;
+      document.getElementById('mobile-sidebar-repo').textContent = currentRepo;
+    }
+
+    // 2. FETCH CONTENTS FROM GITHUB API
+    async function fetchCurrentDirectory() {
+      showLoading(true);
+      hideAllStates();
+
+      // GitHub Content API Endpoint URL
+      let apiUrl = `https://api.github.com/repos/${currentOwner}/${currentRepo}/contents/${currentPath}`;
+      
+      const headers = {};
+      if (apiToken) {
+        headers['Authorization'] = `token ${apiToken}`;
+      }
+
+      try {
+        const response = await fetch(apiUrl, { headers });
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error(`Directory or Repository not found.`);
+          } else if (response.status === 403) {
+            throw new Error(`GitHub API rate limit exceeded. Please add an API token in settings.`);
+          } else {
+            throw new Error(`API returned error code ${response.status}.`);
+          }
+        }
+
+        let data = await response.json();
+        
+        // Handle API output (could be single file or array of files)
+        if (!Array.isArray(data)) {
+          // If it's a file, preview it
+          showFilePreview(data);
+          // Navigate up a directory to keep directory view steady
+          const parts = currentPath.split('/');
+          parts.pop();
+          currentPath = parts.join('/');
+          fetchCurrentDirectory();
+          return;
+        }
+
+        // Sort folders first, then files alphabetically
+        data.sort((a, b) => {
+          if (a.type === 'dir' && b.type !== 'dir') return -1;
+          if (a.type !== 'dir' && b.type === 'dir') return 1;
+          return a.name.localeCompare(b.name);
+        });
+
+        activeFiles = data;
+        renderDirectory();
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Navigation and pathing logic
+    function navigateToPath(path) {
+      currentPath = path;
+      fetchCurrentDirectory();
+    }
+
+    function navigateUp() {
+      const parts = currentPath.split('/').filter(Boolean);
+      parts.pop();
+      currentPath = parts.join('/');
+      fetchCurrentDirectory();
+    }
+
+    // Render Explorer view
+    function renderDirectory() {
+      const searchVal = document.getElementById('search-input').value.toLowerCase();
+      const filtered = activeFiles.filter(item => item.name.toLowerCase().includes(searchVal));
+
+      updateBreadcrumbs();
+
+      if (filtered.length === 0) {
+        document.getElementById('grid-view-wrapper').classList.add('hidden');
+        document.getElementById('list-view-wrapper').classList.add('hidden');
+        document.getElementById('state-empty').classList.remove('hidden');
+        return;
+      } else {
+        document.getElementById('state-empty').classList.add('hidden');
+      }
+
+      if (viewMode === 'grid') {
+        renderGridView(filtered);
+      } else {
+        renderListView(filtered);
+      }
+
+      lucide.createIcons();
+    }
+
+    // Dual-Click Event Distinguisher
+    function handleItemClick(e, item, isFolder) {
+      if (e.target.closest('.star-btn')) return; // Ignore if clicking on bookmark/star button
+
+      if (isFolder) {
+        navigateToPath(item.path);
+        return;
+      }
+
+      if (clickTimeout !== null) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+        // DOUBLE CLICK ACTION: Download any file directly
+        handleFileDblClick(item);
+      } else {
+        clickTimeout = setTimeout(() => {
+          clickTimeout = null;
+          // SINGLE CLICK ACTION: Open detail and download card
+          fetchFileDetailsAndPreview(item);
+        }, 250); // standard delay to catch double click
+      }
+    }
+
+    // Double-click Specific logic (Trigger direct browser download)
+    function handleFileDblClick(item) {
+      if (!item.download_url) return;
+      
+      // Force file download for all formats
+      const link = document.createElement('a');
+      link.href = item.download_url;
+      link.download = item.name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function renderGridView(items) {
+      const wrapper = document.getElementById('grid-view-wrapper');
+      wrapper.innerHTML = '';
+      wrapper.classList.remove('hidden');
+      document.getElementById('list-view-wrapper').classList.add('hidden');
+
+      items.forEach(item => {
+        const isFolder = item.type === 'dir';
+        const fileIcon = getIconForFile(item.name, item.type);
+        const iconColor = isFolder ? 'text-blue-500' : 'text-slate-500 dark:text-slate-400';
+        const itemStarred = isStarred(item.path);
+        
+        const card = document.createElement('div');
+        card.className = 'group relative flex flex-col p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-brand-500 dark:hover:border-brand-500 hover:shadow-md rounded-2xl cursor-pointer transition select-none';
+        
+        // Wire up our double-click-safe click listener
+        card.onclick = (e) => handleItemClick(e, item, isFolder);
+
+        card.innerHTML = `
+          <!-- Star Badge -->
+          <button class="star-btn absolute top-3 right-3 p-1.5 rounded-lg text-slate-300 hover:text-amber-500 dark:text-slate-600 dark:hover:text-amber-500 transition z-10" onclick="toggleStarItem('${item.name}', '${item.path}', '${item.type}', ${itemStarred})">
+            <i data-lucide="star" class="w-4 h-4 ${itemStarred ? 'text-amber-500 fill-amber-500' : ''}"></i>
+          </button>
+
+          <!-- Icon Graphic -->
+          <div class="flex items-center justify-center h-20 w-full bg-slate-50 dark:bg-slate-900/40 rounded-xl mb-3">
+            <i data-lucide="${fileIcon}" class="w-10 h-10 ${iconColor}"></i>
+          </div>
+
+          <!-- Title and Size -->
+          <div class="text-center min-w-0 px-1">
+            <p class="text-sm font-semibold truncate text-slate-700 dark:text-slate-200" title="${item.name}">${item.name}</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">${isFolder ? 'Folder' : formatBytes(item.size)}</p>
+          </div>
+        `;
+        wrapper.appendChild(card);
+      });
+    }
+
+    function renderListView(items) {
+      const tbody = document.getElementById('list-view-tbody');
+      tbody.innerHTML = '';
+      document.getElementById('grid-view-wrapper').classList.add('hidden');
+      document.getElementById('list-view-wrapper').classList.remove('hidden');
+
+      items.forEach(item => {
+        const isFolder = item.type === 'dir';
+        const fileIcon = getIconForFile(item.name, item.type);
+        const iconColor = isFolder ? 'text-blue-500' : 'text-slate-500 dark:text-slate-400';
+        const itemStarred = isStarred(item.path);
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors select-none';
+        
+        // Wire up our double-click-safe click listener
+        row.onclick = (e) => handleItemClick(e, item, isFolder);
+
+        row.innerHTML = `
+          <td class="p-4 flex items-center space-x-3 min-w-0">
+            <i data-lucide="${fileIcon}" class="w-5 h-5 ${iconColor} shrink-0"></i>
+            <span class="text-sm font-semibold truncate text-slate-700 dark:text-slate-200" title="${item.name}">${item.name}</span>
+          </td>
+          <td class="p-4 text-xs text-slate-500 dark:text-slate-400 capitalize">
+            ${isFolder ? 'Folder' : (item.name.split('.').pop() || 'Unknown')} File
+          </td>
+          <td class="p-4 text-xs text-slate-500 dark:text-slate-400">
+            ${isFolder ? '--' : formatBytes(item.size)}
+          </td>
+          <td class="p-4 text-right">
+            <div class="flex items-center justify-end space-x-1">
+              <button class="star-btn p-1.5 rounded-lg text-slate-300 hover:text-amber-500 dark:text-slate-600 dark:hover:text-amber-500 transition z-10" onclick="toggleStarItem('${item.name}', '${item.path}', '${item.type}', ${itemStarred})">
+                <i data-lucide="star" class="w-4 h-4 ${itemStarred ? 'text-amber-500 fill-amber-500' : ''}"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Dynamic breadcrumb generation
+    function updateBreadcrumbs() {
+      const container = document.getElementById('breadcrumbs');
+      container.innerHTML = '';
+
+      // Root element
+      const rootBtn = document.createElement('button');
+      rootBtn.className = 'flex items-center space-x-1 text-slate-500 hover:text-brand-600 font-medium transition';
+      rootBtn.onclick = () => navigateToPath('');
+      rootBtn.innerHTML = `<i data-lucide="home" class="w-4 h-4"></i> <span class="ml-1 text-xs md:text-sm">Root</span>`;
+      container.appendChild(rootBtn);
+
+      if (!currentPath) {
+        lucide.createIcons();
+        return;
+      }
+
+      const paths = currentPath.split('/').filter(Boolean);
+      let cumulativePath = '';
+
+      paths.forEach((folder, index) => {
+        cumulativePath += (index === 0 ? '' : '/') + folder;
+        
+        // Slash divider icon
+        const divider = document.createElement('span');
+        divider.className = 'text-slate-400 mx-1.5 text-xs';
+        divider.innerHTML = `<i data-lucide="chevron-right" class="w-3.5 h-3.5 inline"></i>`;
+        container.appendChild(divider);
+
+        // Path Button
+        const pathBtn = document.createElement('button');
+        const isLast = index === paths.length - 1;
+        pathBtn.className = isLast 
+          ? 'text-slate-800 dark:text-slate-100 font-bold max-w-[120px] md:max-w-xs truncate text-xs md:text-sm' 
+          : 'text-slate-500 hover:text-brand-600 font-medium max-w-[120px] md:max-w-xs truncate transition text-xs md:text-sm';
+        
+        const pathRef = cumulativePath;
+        pathBtn.onclick = () => navigateToPath(pathRef);
+        pathBtn.textContent = folder;
+        
+        container.appendChild(pathBtn);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Search bar filter handler
+    function handleSearch() {
+      renderDirectory();
+    }
+
+    // View mode setter
+    function setViewMode(mode) {
+      viewMode = mode;
+      localStorage.setItem('gitdrive_viewmode', viewMode);
+      
+      const gridBtn = document.getElementById('btn-grid-view');
+      const listBtn = document.getElementById('btn-list-view');
+
+      if (viewMode === 'grid') {
+        gridBtn.className = 'p-1.5 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm';
+        listBtn.className = 'p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100';
+      } else {
+        listBtn.className = 'p-1.5 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm';
+        gridBtn.className = 'p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100';
+      }
+      renderDirectory();
+    }
+
+    // Helper: Match appropriate icons
+    function getIconForFile(filename, type) {
+      if (type === 'dir') return 'folder';
+      
+      const ext = filename.split('.').pop().toLowerCase();
+      switch(ext) {
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif':
+        case 'svg':
+        case 'webp':
+          return 'image';
+        case 'mp4':
+        case 'webm':
+        case 'mkv':
+          return 'video';
+        case 'mp3':
+        case 'wav':
+        case 'ogg':
+          return 'audio-lines';
+        case 'pdf':
+          return 'file-text';
+        case 'json':
+        case 'js':
+        case 'ts':
+        case 'jsx':
+        case 'tsx':
+        case 'html':
+        case 'css':
+        case 'py':
+        case 'cpp':
+        case 'java':
+          return 'file-code';
+        case 'md':
+          return 'file-edit';
+        default:
+          return 'file';
+      }
+    }
+
+    // 3. SECURE FILE DETAILS & METADATA OVERVIEWS
+    async function fetchFileDetailsAndPreview(item) {
+      // Show immediate loading indicator in modal setup
+      showFileModalLoading(item);
+
+      const headers = {};
+      if (apiToken) {
+        headers['Authorization'] = `token ${apiToken}`;
+      }
+
+      try {
+        const response = await fetch(item.url, { headers });
+        if (!response.ok) throw new Error("Could not retrieve file metadata details.");
+        
+        const details = await response.json();
+        showFilePreview(details);
+      } catch (err) {
+        showModalError(err.message);
+      }
+    }
+
+    function showFileModalLoading(item) {
+      const modal = document.getElementById('preview-modal');
+      const title = document.getElementById('modal-file-name');
+      const size = document.getElementById('modal-file-size');
+      const content = document.getElementById('modal-preview-content');
+      const iconContainer = document.getElementById('modal-file-icon');
+      const starBtn = document.getElementById('modal-star-btn');
+
+      title.textContent = item.name;
+      size.textContent = formatBytes(item.size);
+      iconContainer.innerHTML = `<i data-lucide="${getIconForFile(item.name, item.type)}" class="w-5 h-5"></i>`;
+      
+      // Update star icon status inside modal
+      const isStarredItem = isStarred(item.path);
+      starBtn.className = `p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition ${isStarredItem ? 'text-amber-500' : 'text-slate-400'}`;
+      starBtn.onclick = () => {
+        toggleStarItem(item.name, item.path, item.type, isStarredItem);
+        showFileModalLoading(item); // Refresh UI
+      };
+
+      content.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-20">
+          <div class="animate-spin text-brand-500 mb-4">
+            <i data-lucide="loader" class="w-8 h-8"></i>
+          </div>
+          <p class="text-sm text-slate-500">Retrieving file info from GitHub...</p>
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Modified to act only as an informative Card download point (No inline readers for all formats)
+    async function showFilePreview(fileDetails) {
+      const contentContainer = document.getElementById('modal-preview-content');
+      const rawUrl = fileDetails.download_url;
+      const ext = fileDetails.name.split('.').pop().toLowerCase();
+
+      contentContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-10 text-center max-w-md mx-auto space-y-5">
+          <div class="p-5 bg-blue-50 dark:bg-slate-900/50 text-blue-500 rounded-full shadow-inner">
+            <i data-lucide="${getIconForFile(fileDetails.name, fileDetails.type)}" class="w-16 h-16"></i>
+          </div>
+          <div>
+            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 truncate max-w-xs" title="${fileDetails.name}">${fileDetails.name}</h4>
+            <p class="text-xs text-slate-400 mt-1 uppercase font-semibold tracking-wider">${ext || 'Unknown'} File</p>
+            <p class="text-sm text-slate-500 mt-2">Ready for local download or double-click exploration.</p>
+          </div>
+          <div class="w-full pt-4 border-t border-slate-100 dark:border-slate-700 flex flex-col space-y-2">
+            <a href="${rawUrl}" target="_blank" download class="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm transition font-semibold flex items-center justify-center space-x-2 shadow-md">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Download File</span>
+            </a>
+            <button onclick="closePreviewModal()" class="w-full py-2.5 px-4 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-xs transition font-medium">
+              Go Back
+            </button>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function showModalError(message) {
+      document.getElementById('modal-preview-content').innerHTML = `
+        <div class="text-center py-12 max-w-md mx-auto">
+          <p class="text-rose-500 font-bold mb-2">Error Loading Info</p>
+          <p class="text-xs text-slate-400">${message}</p>
+        </div>
+      `;
+    }
+
+    // Modal Control wrappers
+    function closePreviewModal() {
+      document.getElementById('preview-modal').classList.add('hidden');
+    }
+
+    // CONFIG MODALS
+    function openConfigModal() {
+      document.getElementById('config-owner').value = currentOwner;
+      document.getElementById('config-repo').value = currentRepo;
+      document.getElementById('config-token').value = apiToken;
+      document.getElementById('config-modal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('config-modal').classList.add('hidden');
+    }
+
+    // 4. LOCAL BOOKMARKING / STARRING STATE ENGINE
+    function loadBookmarks() {
+      const stored = localStorage.getItem('gitdrive_bookmarks');
+      if (stored) {
+        starredItems = JSON.parse(stored);
+      }
+      updateStarBadge();
+    }
+
+    // Match if file is currently bookmarked
+    function isStarred(path) {
+      return starredItems.some(i => i.path === path);
+    }
+
+    function toggleStarItem(name, path, type, isCurrentlyStarred) {
+      if (isCurrentlyStarred) {
+        starredItems = starredItems.filter(i => i.path !== path);
+      } else {
+        starredItems.push({ name, path, type });
+      }
+      localStorage.setItem('gitdrive_bookmarks', JSON.stringify(starredItems));
+      updateStarBadge();
+      renderDirectory();
+    }
+
+    function updateStarBadge() {
+      const badge = document.getElementById('star-badge');
+      if (starredItems.length > 0) {
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function toggleBookmarksTab() {
+      const modal = document.getElementById('bookmarks-modal');
+      const isVisible = !modal.classList.contains('hidden');
+      
+      if (isVisible) {
+        modal.classList.add('hidden');
+      } else {
+        renderBookmarksList();
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function renderBookmarksList() {
+      const container = document.getElementById('bookmarks-list');
+      container.innerHTML = '';
+
+      if (starredItems.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <p class="text-sm">No starred items yet.</p>
+            <p class="text-xs">Click the star badge beside any file to add it here!</p>
+          </div>
+        `;
+        return;
+      }
+
+      starredItems.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 transition cursor-pointer';
+        
+        row.onclick = (e) => {
+          if (e.target.closest('.unstar-btn')) return;
+          toggleBookmarksTab(); // close drawer
+          
+          if (item.type === 'dir') {
+            navigateToPath(item.path);
+          } else {
+            fetchFileDetailsAndPreview(item);
+          }
+        };
+
+        row.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0">
+            <i data-lucide="${getIconForFile(item.name, item.type)}" class="w-4 h-4 text-slate-500 shrink-0"></i>
+            <span class="text-sm font-semibold truncate text-slate-700 dark:text-slate-200">${item.name}</span>
+          </div>
+          <button class="unstar-btn p-1.5 rounded-lg text-amber-500 hover:text-rose-500 transition" onclick="toggleStarItem('${item.name}', '${item.path}', '${item.type}', true); renderBookmarksList();">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    // 5. VIEW CONTROLLER HELPERS
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('gitdrive_theme', isDark ? 'dark' : 'light');
+      updateThemeIcons();
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('gitdrive_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcons();
+    }
+
+    function updateThemeIcons() {
+      const isDark = document.documentElement.classList.contains('dark');
+      document.getElementById('theme-sun').style.display = isDark ? 'block' : 'none';
+      document.getElementById('theme-moon').style.display = isDark ? 'none' : 'block';
+    }
+
+    function toggleMobileSidebar() {
+      const menu = document.getElementById('mobile-sidebar');
+      menu.classList.toggle('hidden');
+    }
+
+    // Loading & state togglers
+    function showLoading(isLoading) {
+      document.getElementById('state-loading').style.display = isLoading ? 'flex' : 'none';
+    }
+
+    function showError(message) {
+      document.getElementById('error-desc').textContent = message;
+      document.getElementById('state-error').classList.remove('hidden');
+      document.getElementById('grid-view-wrapper').classList.add('hidden');
+      document.getElementById('list-view-wrapper').classList.add('hidden');
+    }
+
+    function hideAllStates() {
+      document.getElementById('state-error').classList.add('hidden');
+      document.getElementById('state-empty').classList.add('hidden');
+      document.getElementById('grid-view-wrapper').classList.add('hidden');
+      document.getElementById('list-view-wrapper').classList.add('hidden');
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+      if (!bytes || bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+  </script>
+</body>
+</html>
